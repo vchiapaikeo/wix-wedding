@@ -44,8 +44,6 @@ $w.onReady(function () {
     show_search()
 });
 
-
-
 function scrub_to_proper_case(name_to_search) {
     return name_to_search.toLowerCase()
         .split(' ')
@@ -129,10 +127,6 @@ function search(search_text) {
     query(search_text_scrubbed);
 }
 
-
-
-
-
 // THE FOLLOWING FUNCTIONS ALLOW US TO NAVIGATE BETWEEN SLIDES
 function show_search() {
     $w('#slideshow1').changeSlide(0);
@@ -173,9 +167,6 @@ function show_confirmation(is_at_least_one_going, is_family) {
     $w('#noname').hide();
     wixWindow.scrollTo(0, 0);
 }
-
-
-
 
 export function radioGroup1_click(event) {
     let rsvp_response;
@@ -260,9 +251,6 @@ function is_at_least_one_family() {
     }
     return is_family;
 }
-
-
-
 
 export function buttonSearch_click(event) {
     const search_text = $w("#input1").value;
