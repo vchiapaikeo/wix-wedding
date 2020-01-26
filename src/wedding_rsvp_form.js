@@ -1,5 +1,6 @@
 // For full API documentation, including code examples, visit https://wix.to/94BuAAs
 import wixData from "wix-data";
+import wixWindow from 'wix-window';
 import {sendEmail} from 'backend/email.jsw';
 
 const ATTENDING_LABEL = 'Attending';
@@ -16,21 +17,20 @@ $w.onReady(function () {
     // Clear out the repeater on initial load and when search results return empty
     if (state.queriedGuests.length === 0) {
         $w("#repeater1").hide();
-        $w('#button3').hide();
+        $w('#buttonRsvp').hide();
     }
 
     // Bind repeater elements to fields
     $w("#repeater1").onItemReady( ($item, itemData, index) => {
         $item("#name").text = itemData.title;
         $item("#message").text = itemData.message;
-        $item("#roommsg").text = itemData.rsvp_response !== NEEDS_RSVP ? itemData.room_message : '';
         $item("#rsvpresponse").text = itemData.rsvp_response;
         $item("#email").value = itemData.email;
         $item("#phone").value = itemData.phone;
         if (itemData.rsvp_response !== NEEDS_RSVP) {
-            $item('#radioGroup1').selectedIndex = itemData.rsvp_response === ATTENDING_LABEL ? 0 : 1;    
+            $item('#radioGroup1').selectedIndex = itemData.rsvp_response === ATTENDING_LABEL ? 0 : 1;
         }
-    }); 
+    });
 
     // Handle enter key press
     $w('#input1').onKeyPress((event, $w) => {
@@ -39,6 +39,9 @@ $w.onReady(function () {
             search(search_text);
         }
     });
+
+    // Finally, show the Search slide after the page loads up
+    show_search()
 });
 
 function scrub_to_proper_case(name_to_search) {
@@ -49,8 +52,8 @@ function scrub_to_proper_case(name_to_search) {
 }
 
 function query(name_to_search) {
-    wixData.query("Guests2") 
-        // Query the collection for any items whose "Name" field contains  
+    wixData.query("Guests2")
+        // Query the collection for any items whose "Name" field contains
         // the value the user entered in the input element
         .eq("title", name_to_search)  // The field title is actually the name of the user
         .or(
@@ -59,14 +62,12 @@ function query(name_to_search) {
                 .eq("partner_name", name_to_search)
         )
         .find()  // Run the query
-        .then(results => {   
-            // Set the table data to be the results of the query 
+        .then(results => {
+            // Set the table data to be the results of the query
             if (results.items.length === 0) {
-                // If we get nothing back, nothing should be on the screen
-                $w("#repeater1").hide();
-                $w('#button3').hide();
-                $w('#spinner').hide();
+                console.log('No results found...')
                 $w('#noname').show();
+                return;
             }
 
             // Sort the names of the users based on what was searched for
@@ -93,57 +94,33 @@ function query(name_to_search) {
                     'phone': result.phone,
                     'room_message': result.room_message,
                     'did_send_email': result.did_send_email,
+                    'point_of_contact': result.point_of_contact,
                 };
             }
 
-            const editedToShow = results.items.map((item) => {
-                if (item.is_family === 1 && item.rsvp_response === ATTENDING_LABEL) {
-                    item.room_message = "As a member of the family, we will handle your room booking. " + 
-                        "Please contact Victor Chiapaikeo or Watue Sowaprux with any questions you might have.";
-                } else if (item.rsvp_response === ATTENDING_LABEL) {
-                    item.room_message = "Please follow this link to book your rooms at the hotel: <LINK HERE>"
-                } else if (item.rsvp_response === NOT_ATTENDING_LABEL) {
-                    item.room_message = "Awh shucks. We're sad that you won't be able to make it but hope to see you soon next time!"
-                }
-                return item;
-            })
-
+            const editedToShow = results.items;
             state.queriedGuests = editedToShow;
             state.userInput = editedToSave;
-            $w("#repeater1").hide();
-            $w("#repeater1").data = [];
-            $w('#spinner').hide();
 
             if (results.items.length > 0) {
-                $w('#noname').hide();
+                $w("#repeater1").data = [];
                 $w("#repeater1").data = editedToShow;
-                $w("#repeater1").show()
-                $w('#button3').show();
-            }
-
-            const shouldShowSeeYaThere = should_show_see_ya_there_msg();
-            if (shouldShowSeeYaThere === true) {
-                $w('#seeyathere').show();
-            } else {
-                $w('#seeyathere').hide();
+                show_people();
             }
 
             const shouldShowUpdateInstead = should_show_update_instead_of_rsvp_button();
             if (shouldShowUpdateInstead) {
-                $w('#button3').label = 'Update';
+                  $w('#buttonRsvp').label = 'Update';
             } else {
-                $w('#button3').label = 'RSVP';
+                  $w('#buttonRsvp').label = 'RSVP';
             }
         });
 }
 
 function search(search_text) {
-    $w('#spinner').show();
-    setTimeout(() => $w('#spinner').hide(), 2000);
     if (search_text === '') {
         $w("#repeater1").hide();
-        $w('#button3').hide();
-        $w('#noname').hide();
+        $w('#buttonRsvp').hide();
         return;
     }
     const search_text_scrubbed = scrub_to_proper_case(search_text);
@@ -151,11 +128,60 @@ function search(search_text) {
     query(search_text_scrubbed);
 }
 
-export function button1_click(event) {
-    // Runs a query on the "recipes" collection
-    const search_text = $w("#input1").value;
-    search(search_text);
+
+// THE FOLLOWING FUNCTIONS ALLOW US TO NAVIGATE BETWEEN SLIDES
+function show_search() {
+    $w('#slideshow1').changeSlide(0);
+    $w('#repeater1').hide();
+    $w('#buttonRsvp').hide();
+    $w('#fammsg').hide();
+    $w('#seeyathere').hide();
+    $w('#failedvalidationmsg').hide();
+    $w('#noname').hide();
+    wixWindow.scrollTo(0, 0);
 }
+
+function show_people() {
+    $w('#slideshow1').changeSlide(1);
+    $w('#repeater1').show();
+    $w('#buttonRsvp').show();
+    $w('#fammsg').hide();
+    $w('#seeyathere').hide();
+    $w('#failedvalidationmsg').hide();
+    $w('#noname').hide();
+    wixWindow.scrollTo(0, 0);
+}
+
+function show_confirmation(is_at_least_one_going, is_family, point_of_contact) {
+    $w('#slideshow1').changeSlide(2);
+    $w('#repeater1').hide();
+    $w('#buttonRsvp').hide();
+    $w('#fammsg').hide();
+    if (is_at_least_one_going) {
+        $w('#seeyathere').show();
+    } else {
+        $w('#seeyanexttime').show();
+    }
+
+    const poc = point_of_contact === null || point_of_contact === undefined ? 'us' : point_of_contact;
+    if (is_family) {
+        $w('#fammsg').text = (
+            `Also, as a member of the family, we'll handle your room booking. ` +
+            `Please contact ${poc} if you have any questions regarding the arrangements.`
+        );
+    } else {
+        $w('#fammsg').text = (
+            `Please navigate to this link to reserve your room. <INSERT LINK HERE>. `
+            `Also, please feel free to contact ${poc} for any help with booking your arrangements.`
+        );
+    }
+
+    $w('#fammsg').show();
+    $w('#failedvalidationmsg').hide();
+    $w('#noname').hide();
+    wixWindow.scrollTo(0, 0);
+}
+
 
 export function radioGroup1_click(event) {
     let rsvp_response;
@@ -196,28 +222,27 @@ function do_user_input_validation() {
 
     for (let itemId in state.userInput) {
         let userInput = state.userInput[itemId];
-        if (userInput.rsvp_response === NEEDS_RSVP) {
-            failed_validation = true;
-        }
-        if (!('email' in userInput) || userInput['email'] === '' || userInput['email'] === undefined) {
-            failed_validation = true;
-        }
-        if (!('phone' in userInput) || userInput['phone'] === '' || userInput['phone'] === undefined) {
-            failed_validation = true;
+        if (userInput.rsvp_response === ATTENDING_LABEL) {
+            if (!('email' in userInput) || userInput['email'] === '' || userInput['email'] === undefined) {
+                failed_validation = true;
+            }
+            if (!('phone' in userInput) || userInput['phone'] === '' || userInput['phone'] === undefined) {
+                failed_validation = true;
+            }
         }
     }
     return failed_validation;
 }
 
-function should_show_see_ya_there_msg() {
-    let should_show = false;
+function is_at_least_one_attending() {
+    let at_least_one = false;
     for (let itemId in state.userInput) {
         let userInput = state.userInput[itemId];
         if (userInput.rsvp_response === ATTENDING_LABEL) {
-            should_show = true;
+            at_least_one = true;
         }
     }
-    return should_show;
+    return at_least_one;
 }
 
 function should_show_update_instead_of_rsvp_button() {
@@ -231,16 +256,35 @@ function should_show_update_instead_of_rsvp_button() {
     return should_hide;
 }
 
-export function button3_click(event) {
+function is_at_least_one_family() {
+    let is_family = false;
+    for (let itemId in state.userInput) {
+        let userInput = state.userInput[itemId];
+        if (userInput.is_family) {
+            is_family = true;
+        }
+    }
+    return is_family;
+}
+
+
+export function buttonSearch_click(event) {
+    const search_text = $w("#input1").value;
+    search(search_text);
+}
+
+export function buttonRsvp_click(event) {
     // Perform update on DB based on state that we have currently
     // Do validation if users haven't entered all the fields in yet
     const failed_validation = do_user_input_validation();
     $w('#failedvalidationmsg').hide();
     if (failed_validation === true) {
+        console.log('Failed validation!');
         $w('#failedvalidationmsg').show();
+        $w('#buttonRsvp').scrollTo();
         return;
     }
-    $w('#spinner').show();
+
     const updatedItems = [];
     for (let itemId in state.userInput) {
         const updatedItem = {
@@ -254,13 +298,13 @@ export function button3_click(event) {
             'phone': state.userInput[itemId]['phone'],
             'room_message': state.userInput[itemId]['room_message'],
             'did_send_email': state.userInput[itemId]['did_send_email'],
+            'point_of_contact': state.userInput[itemId]['point_of_contact'],
         };
         updatedItems.push(updatedItem);
     }
+
     wixData.bulkUpdate("Guests2", updatedItems)
         .then((results) => {
-            search(state.originalQuery);
-
             updatedItems.forEach((item) => {
                 if (item.did_send_email === 0 && item.rsvp_response === ATTENDING_LABEL && item.email !== '') {
                     sendEmail(item)
@@ -268,16 +312,10 @@ export function button3_click(event) {
                         .catch((error) => console.warn(error));
                 }
             });
-            const shouldShowSeeYaThere = should_show_see_ya_there_msg();
-            if (shouldShowSeeYaThere === true) {
-                $w('#seeyathere').show();
-            }
-            const shouldShowUpdateInstead = should_show_update_instead_of_rsvp_button();
-            if (shouldShowUpdateInstead) {
-                $w('#button3').label = 'Update';
-            }
+            const isAtLeastOneAttending = is_at_least_one_attending();
+            const isAtLeastOneFamily = is_at_least_one_family();
+            show_confirmation(isAtLeastOneAttending, isAtLeastOneFamily, updatedItems[0].point_of_contact);
         }).catch((err) => {
             console.warn(err);
-            $w('#spinner').hide();
         });
 }

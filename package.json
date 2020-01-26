@@ -1,0 +1,23 @@
+{
+  "name": "wix-wedding",
+  "version": "1.0.0",
+  "description": "Random JS components for our wix wedding page",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vchiapaikeo/wix-wedding.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vchiapaikeo/wix-wedding/issues"
+  },
+  "homepage": "https://github.com/vchiapaikeo/wix-wedding#readme",
+  "dependencies": {
+    "@sendgrid/mail": "^6.5.1"
+  }
+}
