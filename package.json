@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/vchiapaikeo/wix-wedding#readme",
   "dependencies": {
-    "@sendgrid/mail": "^6.5.1"
+    "@sendgrid/mail": "^6.5.1",
+    "ics": "^2.18.0"
   }
 }
